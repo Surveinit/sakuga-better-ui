@@ -1,3 +1,132 @@
+
+// ==== HOMEPAGE BACKGROUND HERO (auto-loop video + dark overlay) ====
+(function homepageHero() {
+  // Only run on the root homepage (the HTML you pasted has these markers)
+  const isHome = location.pathname === '/' &&
+                 document.documentElement.classList.contains('action-static') &&
+                 document.getElementById('static-index');
+  if (!isHome) return;
+
+  // Add a class to allow CSS theme tweaks
+  document.documentElement.classList.add('sb-home-root');
+  document.body.classList.add('sb-home-root');
+
+  // Create video layer + overlay
+  const wrap = document.createElement('div');
+  wrap.className = 'sb-home-video-wrap';
+  const vid = document.createElement('video');
+  vid.className = 'sb-home-video';
+  vid.autoplay = true;
+  vid.muted = true;
+  vid.loop = true;
+  vid.playsInline = true;
+  vid.preload = 'auto';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'sb-home-overlay';
+
+  wrap.appendChild(vid);
+  document.body.prepend(wrap);
+  document.body.prepend(overlay);
+
+  // Load source strategy:
+  // 1) If user previously set a custom background video in localStorage, use it.
+  // 2) Try to find a random playable video by fetching a random posts page and then the post.
+  // 3) If nothing, keep the dark overlay (it still looks clean).
+
+  const LS_KEY = 'sbHomeBgSrc';
+
+  async function findRandomPlayableVideo() {
+    // Helper: fetch HTML and parse
+    const fetchDoc = async (url) => {
+      const html = await fetch(url, { credentials: 'include' }).then(r => r.text());
+      return new DOMParser().parseFromString(html, 'text/html');
+    };
+
+    // Try a couple of random queries that often return videos
+    const candidates = [
+      '/post?tags=order%3Arandom+webm',
+      '/post?tags=order%3Arandom+mp4',
+      '/post?tags=order%3Arandom+filetype%3Avideo',
+      '/post?tags=order%3Arandom'
+    ];
+
+    for (const path of candidates) {
+      try {
+        const doc = await fetchDoc(path);
+        // Grab first post link
+        const a = doc.querySelector('a[href*="/post/show"]');
+        if (!a) continue;
+
+        // Open post page and look for <video> or <source>
+        const post = await fetchDoc(a.href);
+        const srcEl = post.querySelector('video source[src], video[src], source[type*="video"][src]');
+        const src = srcEl?.getAttribute('src') || srcEl?.src;
+        if (src) return new URL(src, location.origin).toString();
+      } catch {
+        // continue to next candidate
+      }
+    }
+    return null;
+  }
+
+  // Inject a source and play (safe helper)
+  const setVideoSource = (url) => {
+    try {
+      // Clear old sources
+      while (vid.firstChild) vid.removeChild(vid.firstChild);
+      if (!url) return false;
+      const source = document.createElement('source');
+      source.src = url;
+      // Type hint helps some browsers
+      if (url.endsWith('.webm')) source.type = 'video/webm';
+      else if (url.endsWith('.mp4')) source.type = 'video/mp4';
+      vid.appendChild(source);
+      // Kick playback
+      vid.play().catch(() => {});
+      return true;
+    } catch { return false; }
+  };
+
+  (async () => {
+    // 1) Custom user source?
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved && setVideoSource(saved)) return;
+
+    // 2) Try to resolve automatically
+    const autoSrc = await findRandomPlayableVideo();
+    if (autoSrc && setVideoSource(autoSrc)) {
+      // Cache for next time
+      localStorage.setItem(LS_KEY, autoSrc);
+      return;
+    }
+
+    // 3) No video found — leave overlay only (nice dark hero)
+  })();
+
+  // Quality-of-life: allow user to paste a custom URL for the home background (Shift+B)
+  // Works from ANY page, but you’ll usually press it on homepage to see immediate effect.
+  document.addEventListener('keydown', (e) => {
+    // Avoid interfering with input fields
+    const target = e.target;
+    const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+    if (typing) return;
+
+    if (e.shiftKey && (e.key === 'B' || e.key === 'b')) {
+      e.preventDefault();
+      const val = prompt('Set homepage background video URL (.mp4 or .webm). Leave blank to clear.');
+      if (val && val.trim()) {
+        localStorage.setItem(LS_KEY, val.trim());
+        setVideoSource(val.trim());
+      } else if (val !== null) {
+        localStorage.removeItem(LS_KEY);
+        // Clear current source; overlay remains
+        setVideoSource(null);
+      }
+    }
+  });
+})();
+
 (() => {
   // --- Critical CSS injection (in case content.css misses on some routes) ---
   function ensureStyle() {
