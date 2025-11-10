@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "SakugaBooru — Better UI",
+  "version": "1.0.0",
+  "description": "Fixes layout, adds grid + size controls + infinite scroll for SakugaBooru.",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://sakugabooru.com/*",
+        "*://*.sakugabooru.com/*",
+        "*://sakugabooru.moe/*",
+        "*://*.sakugabooru.moe/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    }
+  ]
+}
