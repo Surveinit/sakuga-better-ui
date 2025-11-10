@@ -213,3 +213,124 @@ body {
 
 /* Keep our toolbar on top if you open it here too */
 #sb-toolbar { z-index: 2147483647; }
+
+
+/* ==== Post index skin (matches homepage aesthetics) ==== */
+.sb-post-root {
+  background: #000 !important;
+  color: #eee;
+}
+
+/* Sticky top bar */
+#sb-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2147483646;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(15,15,15,.85);
+  border-bottom: 1px solid #232323;
+  backdrop-filter: blur(6px);
+}
+
+/* Title + nav links */
+#sb-topbar .sb-brand {
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-decoration: none;
+  color: #fafafa;
+  margin-right: 8px;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+#sb-topbar .sb-nav a {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(20,20,20,.75);
+  border: 1px solid #2a2a2a;
+  color: #eee;
+  text-decoration: none;
+  white-space: nowrap;
+}
+#sb-topbar .sb-search {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+#sb-topbar .sb-search input[type="text"] {
+  width: min(460px, 50vw);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  background: rgba(15,15,15,.9);
+  color: #eee;
+  outline: none;
+}
+#sb-topbar .sb-search button {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #2f2f2f;
+  background: #1c1c1c;
+  color: #eee;
+  cursor: pointer;
+}
+
+/* Make sure our grid never blocks clicks on native UI */
+#sb-grid {
+  position: relative;
+  z-index: 2;
+}
+#sb-toolbar { z-index: 2147483647; }
+
+/* Keep paginator and header above the grid just in case */
+#paginator, .pagination { position: relative; z-index: 3; }
+
+/* Button/link reset for native paginator + action links */
+.pagination a, #paginator a, .pagination span, #paginator span,
+#content a.button, a.tag-type-0, a.tag-type-1, a.tag-type-2, a.tag-type-3 {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 10px !important;
+  background: rgba(20,20,20,.75) !important;
+  border: 1px solid #2a2a2a !important;
+  color: #eee !important;
+  text-decoration: none !important;
+  line-height: 1.2;
+}
+
+/* Layout polish */
+#content { max-width: 1400px; margin: 0 auto; padding: 0 12px 80px; }
+
+
+/* Hard-clean mode for /post: hide legacy blocks and keep only our UI */
+body.sb-hard-clean #content > *:not(#sb-topbar):not(#sb-grid):not(#sb-pagin) {
+  display: none !important;
+}
+
+/* Our paginator (matches your aesthetic) */
+#sb-pagin {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0 16px;
+}
+#sb-pagin a, #sb-pagin span {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(20,20,20,.75);
+  border: 1px solid #2a2a2a;
+  color: #eee;
+  text-decoration: none;
+  line-height: 1.2;
+}
+#sb-pagin span[aria-current="page"] {
+  background: #2a2a2a;
+  border-color: #3a3a3a;
+}

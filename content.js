@@ -1,4 +1,159 @@
 
+
+// ==== POST INDEX SKIN & TOPBAR ====
+(function postIndexSkin() {
+  if (location.pathname !== '/post') return;
+
+  // Theme classes
+  document.documentElement.classList.add('sb-post-root');
+  document.body.classList.add('sb-post-root');
+
+  // Build sticky topbar once
+  if (!document.getElementById('sb-topbar')) {
+    const top = document.createElement('div');
+    top.id = 'sb-topbar';
+    top.innerHTML = `
+      <a class="sb-brand" href="/">sakugabooru</a>
+      <nav class="sb-nav">
+        <a href="/post" title="Posts">Posts</a>
+        <a href="/comment" title="Comments">Comments</a>
+        <a href="/tag" title="Tags">Tags</a>
+        <a href="/wiki" title="Wiki">Wiki</a>
+      </nav>
+      <form class="sb-search" action="/post" method="get">
+        <input type="text" name="tags" id="sb-topbar-tags" placeholder="Search tags…" />
+        <button type="submit">Search</button>
+      </form>
+    `;
+    // Prefill search box with current ?tags=
+    const params = new URLSearchParams(location.search);
+    const q = params.get('tags') || '';
+    top.querySelector('#sb-topbar-tags').value = q;
+
+    // Insert before #content
+    const content = document.getElementById('content') || document.body.firstElementChild;
+    content?.parentNode?.insertBefore(top, content);
+  }
+
+  // Make sure paginator remains visible/clickable
+  const paginator = document.querySelector('#paginator, .pagination');
+  if (paginator) paginator.style.display = ''; // unhide if any previous rule hid it
+})();
+
+
+// ==== POST INDEX SKIN: sticky topbar (same look as home) ====
+(function postIndexTopbar() {
+  if (location.pathname !== '/post') return;
+
+  document.documentElement.classList.add('sb-post-root');
+  document.body.classList.add('sb-post-root');
+
+  if (!document.getElementById('sb-topbar')) {
+    const top = document.createElement('div');
+    top.id = 'sb-topbar';
+    top.innerHTML = `
+      <a class="sb-brand" href="/">sakugabooru</a>
+      <nav class="sb-nav">
+        <a href="/post" title="Posts">Posts</a>
+        <a href="/comment" title="Comments">Comments</a>
+        <a href="/tag" title="Tags">Tags</a>
+        <a href="/wiki" title="Wiki">Wiki</a>
+      </nav>
+      <form class="sb-search" action="/post" method="get">
+        <input type="text" name="tags" id="sb-topbar-tags" placeholder="Search tags…" />
+        <button type="submit">Search</button>
+      </form>
+    `;
+    const params = new URLSearchParams(location.search);
+    top.querySelector('#sb-topbar-tags').value = params.get('tags') || '';
+    const content = document.getElementById('content') || document.body.firstElementChild;
+    content?.parentNode?.insertBefore(top, content);
+  }
+})();
+
+
+// ==== HARD CLEAN on /post + our own paginator ====
+(function postIndexHardClean() {
+  if (location.pathname !== '/post') return;
+
+  // Mark body so CSS hides legacy blocks (header, side bits, native paginator, etc.)
+  document.body.classList.add('sb-hard-clean');
+
+  // Build our paginator under the topbar
+  function buildPagin() {
+    let pag = document.getElementById('sb-pagin');
+    if (!pag) {
+      pag = document.createElement('div');
+      pag.id = 'sb-pagin';
+      const topbar = document.getElementById('sb-topbar');
+      (topbar || document.getElementById('content')).insertAdjacentElement('afterend', pag);
+    }
+
+    const url = new URL(location.href);
+    const params = url.searchParams;
+    const current = parseInt(params.get('page') || '1', 10);
+    const tags = params.get('tags') || '';
+
+    // Helper: link for page n
+    const linkFor = (n) => {
+      const u = new URL(location.href);
+      const p = u.searchParams;
+      p.set('tags', tags);
+      p.set('page', String(n));
+      u.search = p.toString();
+      return u.toString();
+    };
+
+    // Build a compact window: Prev | 1 2 3 4 5 | Next
+    const pages = [];
+    const start = Math.max(1, current - 2);
+    const end   = Math.max(5, current + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    const parts = [];
+    // Prev
+    parts.push(current > 1
+      ? `<a href="${linkFor(current - 1)}" rel="prev">← Previous</a>`
+      : `<span>← Previous</span>`);
+
+    // Numbers
+    pages.forEach(n => {
+      if (n === current) parts.push(`<span aria-current="page">${n}</span>`);
+      else parts.push(`<a href="${linkFor(n)}">${n}</a>`);
+    });
+
+    // Next (we don’t know the max page; link anyway)
+    parts.push(`<a href="${linkFor(current + 1)}" rel="next">Next →</a>`);
+
+    pag.innerHTML = parts.join('');
+  }
+
+  // Initial render and keep it in sync if navigation changes
+  buildPagin();
+
+  // If your extension supports SPA-ish nav, listen to popstate
+  window.addEventListener('popstate', buildPagin);
+
+  // Also rebuild after our infinite scroll fetches, in case user uses the page links
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('#sb-pagin a[href]');
+    if (!a) return;
+    // Let navigation happen; rebuild soon after
+    setTimeout(buildPagin, 50);
+  });
+
+  // As we’re hard-hiding legacy, make sure our cleanup function doesn’t unhide anything
+  const originalMaybeHide = window.maybeHideOriginalLists;
+  // If your code had it in closure, ensure it hides nothing on /post
+  window.maybeHideOriginalLists = function(foundCount = 0) {
+    if (location.pathname !== '/post') {
+      return originalMaybeHide ? originalMaybeHide(foundCount) : null;
+    }
+    // Do nothing; body.sb-hard-clean CSS already hides legacy UI
+    return null;
+  };
+})();
+
 // ==== HOMEPAGE BACKGROUND HERO (auto-loop video + dark overlay) ====
 (function homepageHero() {
   // Only run on the root homepage (the HTML you pasted has these markers)
@@ -363,13 +518,38 @@
     return tile;
   }
 
-  function maybeHideOriginalLists(foundCount = 0) {
-    const shouldHide = cleanupEnabled && foundCount >= 6;
-    document.querySelectorAll('#post-list, .content, .posts, .thumbs, .post-list, #posts').forEach(el => {
-      if (el.id === SB_GRID_ID) return;
+function maybeHideOriginalLists(foundCount = 0) {
+  const shouldHide = cleanupEnabled && foundCount >= 6;
+
+  // On /post, only hide the thumbnail containers we’re replacing.
+  if (location.pathname === '/post') {
+    const toHide = [
+      'ul#post-list-posts',
+      '#post-list .thumbs',
+      '#posts .thumbs',
+      '.thumbs',
+      '#post-list .content-list',
+      '.post-preview-list'
+    ].join(', ');
+    document.querySelectorAll(toHide).forEach(el => {
+      if (el.id === 'sb-grid') return;
       el.style.display = shouldHide ? 'none' : '';
     });
+
+    // Keep surrounding content visible
+    const keepVisible = ['#paginator', '.pagination', '#tags',
+      '#search-box', '#content h1', '#content .sidebar', '#content .footer'
+    ].join(', ');
+    document.querySelectorAll(keepVisible).forEach(el => { el.style.display = ''; });
+    return;
   }
+
+  // Fallback (non-/post routes): old behavior, but safer
+  document.querySelectorAll('#post-list, .posts, .thumbs, .post-list, #posts').forEach(el => {
+    if (el.id === 'sb-grid') return;
+    el.style.display = shouldHide ? 'none' : '';
+  });
+}
 
   function detectNextURL(root = document, baseHref = null) {
     const next = root.querySelector(NEXT_LINK_SEL);
@@ -427,6 +607,7 @@
     }, { passive: true });
   }
 
+
   function observePageMutations() {
     const mo = new MutationObserver(() => {
       if (moScheduled) return;
@@ -450,3 +631,4 @@
     renderInitial();
   }
 })();
+
